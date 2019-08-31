@@ -4,41 +4,32 @@ using FarCo.GeneticNeurons.Utils;
 
 namespace FarCo.GeneticNeurons.Genetic
 {
-    public class EvolutionManager
+    public sealed class EvolutionManager
     {
-        public float InitMinValue = -1f;
-        public float InitMaxValue = 1f;
-
         public readonly int PopulationSize;
         public readonly List<Genotype> CurrentPopulation;
+        public int GenerationCount { get; private set; }
         public Genotype BestGenotype { get; private set; }
 
-        public int GenerationCount
-        {
-            get { return _generationUpdater.CurrentGeneration; }
-        }
+        private readonly IGenerationUpdater[] _updaters;
 
-        private readonly IGenerationUpdater _generationUpdater;
-        private readonly int _genotypeGenesAmount;
-
-        public EvolutionManager(IGenerationUpdater generationUpdater, int genotypeGenesAmount, int populationSize)
+        public EvolutionManager(int genotypeGenesAmount, int populationSize, params IGenerationUpdater[] updaters)
         {
             PopulationSize = populationSize;
-            _generationUpdater = generationUpdater;
-            _genotypeGenesAmount = genotypeGenesAmount;
+            _updaters = updaters;
 
             CurrentPopulation = new List<Genotype>(PopulationSize);
             for (int i = 0; i < PopulationSize; i++)
             {
-                CurrentPopulation.Add(new Genotype(new float[genotypeGenesAmount]));
+                CurrentPopulation.Add(new Genotype(new float[genotypeGenesAmount], 0));
             }
         }
 
-        public void FillPopulationWithRandom(Random random)
+        public void FillPopulationWithRandom(Random random, float minValue, float maxValue)
         {
             foreach (Genotype genotype in CurrentPopulation)
             {
-                random.FillArrayWithRandom(genotype.Genes, InitMinValue, InitMaxValue);
+                random.FillArrayWithRandom(genotype.Genes, minValue, maxValue);
             }
         }
 
@@ -46,7 +37,12 @@ namespace FarCo.GeneticNeurons.Genetic
         {
             CurrentPopulation.Sort();
             BestGenotype = CurrentPopulation[0];
-            _generationUpdater.UpdateGeneration(CurrentPopulation, _genotypeGenesAmount, PopulationSize);
+
+            GenerationCount++;
+            foreach (IGenerationUpdater updater in _updaters)
+            {
+                updater.UpdateGeneration(CurrentPopulation, GenerationCount);
+            }
         }
     }
 }

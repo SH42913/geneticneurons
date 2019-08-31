@@ -13,28 +13,28 @@ namespace FarCo.GeneticNeurons
         private readonly INeuronActivator _neuronActivator;
 
         private readonly int[] _neuralNetworkTopology;
-        private readonly int _weightCount;
+        private readonly int _genotypeGenesAmount;
 
         private readonly GeneticNeuron[] _currentPopulation;
 
         public GeneticNeuronGenerator(
             INeuronActivator neuronActivator,
-            IGenerationUpdater generationUpdater,
             int populationSize,
-            params int[] topology)
+            int[] topology,
+            params IGenerationUpdater[] generationUpdaters)
         {
             _neuralNetworkTopology = topology;
-            _weightCount = NeuralNetwork.CalculateWeightCount(topology);
+            _genotypeGenesAmount = NeuralNetwork.CalculateWeightCount(topology);
 
             _currentPopulation = new GeneticNeuron[populationSize];
-            EvolutionManager = new EvolutionManager(generationUpdater, _weightCount, populationSize);
+            EvolutionManager = new EvolutionManager(_genotypeGenesAmount, populationSize, generationUpdaters);
 
             _neuronActivator = neuronActivator;
         }
 
-        public void InitRandomPopulation(Random random)
+        public void InitRandomPopulation(Random random, float minValue, float maxValue)
         {
-            EvolutionManager.FillPopulationWithRandom(random);
+            EvolutionManager.FillPopulationWithRandom(random, minValue, maxValue);
             GeneratePopulation();
         }
 
@@ -59,7 +59,7 @@ namespace FarCo.GeneticNeurons
                 Genotype genotype = EvolutionManager.CurrentPopulation[i];
                 var network = new NeuralNetwork(_neuronActivator, _neuralNetworkTopology);
 #if DEBUG
-                if (_weightCount != genotype.Genes.Length)
+                if (_genotypeGenesAmount != genotype.Genes.Length)
                 {
                     throw new Exception("The given genotype's parameter count must match " +
                                         "the neural network topology's weight count.");

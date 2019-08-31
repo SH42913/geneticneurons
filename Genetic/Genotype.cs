@@ -2,20 +2,15 @@ using System;
 
 namespace FarCo.GeneticNeurons.Genetic
 {
-    public class Genotype : IComparable<Genotype>
+    public sealed class Genotype : IComparable<Genotype>
     {
         public float Fitness;
         public int Generation;
         public readonly float[] Genes;
 
-        public Genotype(float[] genes, int generation = 0)
+        public Genotype(float[] genes, int generation)
         {
-            if (genes == null)
-            {
-                throw new Exception("Genes must be not null!");
-            }
-
-            Genes = genes;
+            Genes = genes ?? throw new Exception("Genes must be not null!");
             Fitness = 0;
             Generation = generation;
         }
