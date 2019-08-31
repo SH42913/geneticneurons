@@ -19,9 +19,9 @@ namespace FarCo.GeneticNeurons
             get { return Genotype.Generation; }
         }
 
-        public readonly FeedForwardNeuralNetwork NeuralNetwork;
+        public readonly NeuralNetwork NeuralNetwork;
 
-        public GeneticNeuron(Genotype genotype, FeedForwardNeuralNetwork neuralNetwork)
+        public GeneticNeuron(Genotype genotype, NeuralNetwork neuralNetwork)
         {
             Genotype = genotype;
             NeuralNetwork = neuralNetwork;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
 
@@ -13,13 +14,14 @@ namespace FarCo.GeneticNeurons.Neurons.SaveLoad
         private const string InputCountId = "InputCount";
         private const string OutputCountId = "OutputCount";
 
-        public static void SaveNetworkToFile(this FeedForwardNeuralNetwork network, string path)
+        public static void SaveNetworkToFile(this NeuralNetwork network, string path)
         {
             XElement root = new XElement("NeuralNetwork");
             foreach (NeuralLayer layer in network.Layers)
             {
                 XElement layerElement = new XElement(
                     LayerId,
+                    new XAttribute(BiasId, layer.Bias.ToString(CultureInfo.InvariantCulture)),
                     new XAttribute(InputCountId, layer.InputCount.ToString()),
                     new XAttribute(OutputCountId, layer.OutputCount.ToString()));
 
@@ -29,14 +31,9 @@ namespace FarCo.GeneticNeurons.Neurons.SaveLoad
                     {
                         layerElement.Add(new XElement(WeightId)
                         {
-                            Value = layer.Neurons[inputIndex][outputIndex].ToString("G")
+                            Value = layer.Weights[inputIndex][outputIndex].ToString("G")
                         });
                     }
-
-                    layerElement.Add(new XElement(BiasId)
-                    {
-                        Value = layer.BiasNode[outputIndex].ToString("G")
-                    });
                 }
 
                 root.Add(layerElement);
@@ -45,13 +42,13 @@ namespace FarCo.GeneticNeurons.Neurons.SaveLoad
             new XDocument(root).Save(path);
         }
 
-        public static void LoadWeightsFromFile(this FeedForwardNeuralNetwork network, string path)
+        public static void LoadWeightsFromFile(this NeuralNetwork network, string path)
         {
             XDocument doc = XDocument.Load(path);
             if (doc.Root == null) return;
 
             XElement root = doc.Root;
-            var weightList = new List<string>();
+            var weightList = new List<string>(8);
             foreach (XElement layerElement in root.Elements(LayerId))
             {
                 foreach (XElement element in layerElement.Elements())
@@ -64,20 +61,21 @@ namespace FarCo.GeneticNeurons.Neurons.SaveLoad
             network.FillLayers(weights);
         }
 
-        public static FeedForwardNeuralNetwork CreateNeuralNetworkFromFile(string path,
-            INeuronActivator neuronActivator)
+        public static NeuralNetwork CreateNeuralNetworkFromFile(string path, INeuronActivator neuronActivator)
         {
             XDocument doc = XDocument.Load(path);
             if (doc.Root == null) throw new Exception("Document is empty");
 
             XElement root = doc.Root;
-            var weightList = new List<string>();
-            var inputCountList = new List<string>();
-            var outputCountList = new List<string>();
+            var biasList = new List<string>(8);
+            var weightList = new List<string>(8);
+            var inputCountList = new List<string>(8);
+            var outputCountList = new List<string>(8);
             foreach (XElement layerElement in root.Elements(LayerId))
             {
-                inputCountList.Add(layerElement.Attribute(InputCountId).Value);
-                outputCountList.Add(layerElement.Attribute(OutputCountId).Value);
+                biasList.Add(layerElement.Attribute(BiasId)?.Value);
+                inputCountList.Add(layerElement.Attribute(InputCountId)?.Value);
+                outputCountList.Add(layerElement.Attribute(OutputCountId)?.Value);
                 foreach (XElement element in layerElement.Elements())
                 {
                     weightList.Add(element.Value);
@@ -93,8 +91,18 @@ namespace FarCo.GeneticNeurons.Neurons.SaveLoad
             topology[topology.Length - 1] = int.Parse(outputCountList[outputCountList.Count - 1]);
 
             float[] weights = weightList.Select(float.Parse).ToArray();
-            var network = new FeedForwardNeuralNetwork(neuronActivator, topology);
+            var network = new NeuralNetwork(neuronActivator, topology);
             network.FillLayers(weights);
+
+            for (int i = 0; i < biasList.Count; i++)
+            {
+                string biasString = biasList[i];
+                if (!string.IsNullOrEmpty(biasString) && float.TryParse(biasString, out float bias))
+                {
+                    network.Layers[i].Bias = bias;
+                }
+            }
+
             return network;
         }
     }
